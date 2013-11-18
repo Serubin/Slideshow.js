@@ -1,4 +1,4 @@
-#slide-bar{background:url(../images/photo-bg.png);height:60px;width:900px;position:relative;top:-80px;font:14px Tahoma,Arial,Helvetica,sans-serif;}
+#slide-bar{background:rgba(0,0,0,0.6);height:60px;width:90%;position:relative;top:-80px;font:14px Tahoma,Arial,Helvetica,sans-serif;}
 #slide-title{color:#fff;font-size:24px;font-family:Tahoma,Arial,Helvetica,sans-serif;position:relative;padding:2px 15px;}
 #slide-desc{color:#fff;text-align:right;padding:5px 15px;position:relative;top:-30px;}
 #slide-complete{background:#fff;height:5px;opacity:.40;}

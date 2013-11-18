@@ -10,6 +10,10 @@ function SlideShow(){
 	/* Functions Vars */
 	
 	var addSlide;
+	var start;
+	var next;
+	var pause;
+	var resume;
 	
 	/* User Vars (Defaults); */
 	var startOnLoad = true; // Start once SlideShow has loaded
@@ -17,15 +21,16 @@ function SlideShow(){
 	var random = false; // Progress through slides randomly
 	var defaultInterval = 10000; // Default in MS (10 seconds);
 	var hoverPuase = true; // Pause when hovered over image
-	var transition = "normal"; // TODO create different transitions
+	var transition = "fade"; // TODO create different transitions
 	var hoverPreview = true; // Image preview on selector dots
 	var hoverText = "Click for more!"; // Text displayed when hovered over slide
 	var height = 550; // Default frame size
 	var width = 925; // Default frame size
 	var debugM = false; // debug messages are false by default
-	var onload;
+	var slideOnload = undefined;
 	
 	/* Script Vars */
+	var initiated = false;
 	var slides = new Array();
 	var selectors = new Array();
 	var slidesLoaded = "";
@@ -40,9 +45,13 @@ function SlideShow(){
 	var titleEl;
 	var descEl;
 	var selectEl;
+	var slideBarEl;
 	
 	/* Private Functions */
 	function initiate(arguments){
+		if(initiated){
+			return 0;
+		}
 		// Collects init data from anonymous object
 		if(typeof arguments[0].element != "undefined"){
 			slideShowEl = document.getElementById(arguments[0].element);
@@ -83,9 +92,10 @@ function SlideShow(){
 			debugM = arguments[0].debug;
 		}
 		if(typeof arguments[0].onload != "undefined"){
-			onload = arguments[0].onload;
+			slideOnload = arguments[0].onload;
 		}
 		debug("init");
+		initiated = false;
 	}
 	
 	function create(){
@@ -96,9 +106,18 @@ function SlideShow(){
 		}
 		
 		slideShowEl.className = "slide-container";
+		
 		linkEl = document.createElement("a");
 			linkEl.id = "slide-link";
 			linkEl.title = hoverText;
+		
+		linkEl.addEventListener("mousemove", function(e){
+			curTimer.stop();
+		});
+		linkEl.addEventListener("mouseout", function(e){
+			curTimer.start();
+		});
+		
 		imageEl = document.createElement("img");
 			imageEl.id = "slide-image";
 			imageEl.width = width;
@@ -106,19 +125,19 @@ function SlideShow(){
 		linkEl.appendChild(imageEl);
 		
 		// Creates "meta" bar
-		var bar = document.createElement("div");
-			bar.id = "slide-bar";
+		slideBarEl = document.createElement("div");
+			slideBarEl.id = "slide-bar";
 		completeEl = document.createElement("div");
 			completeEl.id = "slide-complete";
-		bar.appendChild(completeEl);
+		slideBarEl.appendChild(completeEl);
 		
 		titleEl = document.createElement("div");
 			titleEl.id = "slide-title";
-		bar.appendChild(titleEl);
+		slideBarEl.appendChild(titleEl);
 		
 		descEl = document.createElement("div");
 			descEl.id = "slide-desc";
-		bar.appendChild(descEl);
+		slideBarEl.appendChild(descEl);
 		
 		// Creates selectors
 		var select = document.createElement("ul");
@@ -161,17 +180,54 @@ function SlideShow(){
 		}
 		
 		slideShowEl.appendChild(linkEl);
-		slideShowEl.appendChild(bar);
+		slideShowEl.appendChild(slideBarEl);
 		if(startOnLoad){
 			this.start();
 		}
 	}
+	// Inverts color of bar
+	function invertBar(color){
+		var icolor;
+		color = color.substring(1);
+		icolor = parseInt(color, 16);
+		icolor = 0xFFFFFF ^ icolor; 
+		icolor = icolor.toString(16);
+		icolor = ("000000" + icolor).slice(-6)
+		color = "#" + color;
+		icolor = "#" + icolor;
+		
+		style.webkitTransitionDuration =
+		style.MozTransitionDuration =
+		style.msTransitionDuration =
+		style.OTransitionDuration =
+		style.transitionDuration = '500ms';
+
+		style.webkitTranstion =
+		style.msTranstion =
+		style.MozTranstion =
+		style.OTranstion = 'color 0.5s, background 0.5s';
+		
+		slideBarEl.style.background = rgb(color, 0.6);
+		completeEl.style.background = icolor;
+		titleEl.style.color = icolor;
+		descEl.style.color = icolor;
+		
+		function rgb(hex, alpha){
+			var r = parseInt(hex.substring(1, 3), 16);
+			var g = parseInt(hex.substring(3, 5), 16);
+			var b = parseInt(hex.substring(5, 7), 16);
+			return "rgba(" + r + ", " + g + ", " + b + ", " + alpha + ")";
+		}
+	}
 	
 	function preLoadImages(){
+		if(!pre_load){
+			return 0;
+		}
 		for(var i = 0;total > i;i++){
 			var preLoadImg = new Image();
 			preLoadImg.onload = function(){
-				debug("Image " + i + "was preloaded.");
+				debug("Image " + this.src + " was preloaded.");
 			}
 			preLoadImg.src = slides[i].img;
 		}
@@ -179,7 +235,7 @@ function SlideShow(){
 	
 	function nextImage(){
 		if(!random){
-			switchImage((imageNum+1) % total);
+			switchImage((curSlide+1) % total);
 		} else {
 			switchImage(Math.floor(Math.random()*total));
 		}
@@ -191,11 +247,15 @@ function SlideShow(){
 	
 	// Switches image based on ID
 	function switchImage(id){
+		debug("Image: " + id);
 		if(id > slides.length){
 			error("No slide found");
 		}
 		var next = slides[id];
 		curSlide = id;
+		invertBar(next.invert);
+		switchText(id);
+		animate(transition, id, undefined);
 		
 	}
 	
@@ -204,23 +264,30 @@ function SlideShow(){
 		var next = slides[id];
 		linkEl.href = next.link;
 		titleEl.innerHTML = next.title;
-		descEl.innerHMLT = next.desc;
+		descEl.innerHTML = next.desc;
 	}
 	
 	// Holds different transitions
 	function animate(mode, id, callback){
+		var speed = 500; // default animation speed
 		switch(mode){
 			case "fade":
-			imageEl.className += " transitionFade";
-			imageEl.style.opacity = 0;
-			setTimeout(function(){
-				imageEl.src = slides[id].img;
-				imageEl.style.opacity = 100;
-				
-				curTimer.stop();
-				curTimer = new Timer(nextImage(), defaultInterval);
-				imageEl.className.replace(" transitionFade", "");
-			}, 500);
+				//imageEl.className += " transitionFade";
+				style = imageEl.style;
+				style.opacity = 0;
+				style.webkitTransitionDuration =
+				style.MozTransitionDuration =
+				style.msTransitionDuration =
+				style.OTransitionDuration =
+				style.transitionDuration = speed + 'ms';
+
+				style.webkitTranstion =
+				style.msTranstion =
+				style.MozTranstion =
+				style.OTranstion = 'opacity 0.5s';
+				animateFinish = function(){
+					imageEl.style.opacity = 100;
+				}
 			break;
 			case "slide":
 			
@@ -229,13 +296,26 @@ function SlideShow(){
 				error("No transition found");
 			break;
 		}
-		callback();
+		setTimeout(function(){
+			imageEl.src = slides[id].img;	
+			if(typeof curTimer != "undefined") curTimer.stop();
+			curTimer = new Timer(nextImage, defaultInterval);
+			if(typeof animateFinish != "undefined") animateFinish();
+		}, speed);
+		//callback();
 	}
 	
 	// Sets new and old selectors to active and non active respectively
 	function setActiveSelector(newId, curId){
 		selectors[newId].element.firstChild.className += "photo-button-active";
 		selectors[curId].element.firstChild.className = "photo-button";
+	}
+	
+	// updates complete object
+	function updateComplete(){
+		if(typeof curTimer != "undefined")
+			completeEl.style.width = curTimer.getRemainingTime()/(defaultInterval/slideBarEl.offsetWidth) + "px";
+		setTimeout(updateComplete, 5);
 	}
 	
 	function error(text){
@@ -256,26 +336,45 @@ function SlideShow(){
 			return 0;
 		}
 		for(var i = 0;arguments.length > i;i++){
-			slides.push(new Slide(i, arguments[i].img, arguments[i].title, arguments[i].link, arguments[i].desc));
+			var invert = "#000000";
+			if(typeof arguments[i].invert != "undefined") invert = arguments[i].invert;
+			slides.push(new Slide(i, arguments[i].img, arguments[i].title, arguments[i].link, arguments[i].desc, invert));
 		}
 		total = slides.length;
+		preLoadImages();
 		create();
 	}
 	
 	this.start = function(){
-		onload();
+		if(typeof slideOnload != "undefined") slideOnload();
+		switchImage(curSlide);
+		updateComplete();
+	}
+	
+	this.next = function(){
 		nextImage();
+	}
+	
+	this.pause = function(){
+		debug("pause");
+		curTimer.stop();
+	}
+	
+	this.resume = function(){
+		debug("resume");
+		curTimer.start();
 	}
 	
 	/* Internal Objects */
 	
 	// Holds Slide Data
-	function Slide(id, img, title, link, desc){
+	function Slide(id, img, title, link, desc, invert){
 		this.id = id
 		this.img = img;
 		this.title = title;
 		this.link = link;
 		this.desc = desc;
+		this.invert = invert;
 	}
 	
 	function Timer(call, interval){
@@ -283,22 +382,33 @@ function SlideShow(){
 		var start;
 		var stop;
 		var pause;
-		var getTime;
+		var getRemainingTime;
 		
 		/* Timer Vals */
 		var startTime;
 		var timerId;
+		var isStopped = true;
 		
 		// Starts timer		
 		function startTimer(){
+			debug("Timer interval: " + interval);
 			startTime = (new Date()).getTime();
-			timerID = setTimeout(call, interval);
+			timerId = setTimeout(call, interval);
+			isStopped = false;
 		}
 		
 		// Stops timer
 		function stopTimer(){
-			interval = this.getTime();
-			clearTimeout(timerId);
+			if(!isStopped){
+				interval = getTime();
+				clearTimeout(timerId);
+				isStopped = true;
+			}
+		}
+		
+		function getTime(){
+			if(isStopped) return interval;
+			return (interval-((new Date()).getTime()-startTime))
 		}
 		
 		/* Public Timer Functions */
@@ -310,8 +420,8 @@ function SlideShow(){
 			stopTimer();
 		}
 		
-		this.getTime = function(){
-			return(interval-((new Date()).getTime()-startTime));
+		this.getRemainingTime = function(){
+			return getTime();
 		}
 		
 		// Starts
