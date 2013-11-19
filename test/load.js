@@ -1,6 +1,6 @@
 var slideshow;
 function start(){
-	slideshow = new SlideShow({startOnLoad: false,pre_load: true,width: 960,height: 550,debug: true});
+	slideshow = new SlideShow({pre_load: true,width: 960,height: 550,debug: true});
 
 	slideshow.addSlide({
 	img:	'http://localhost/Serubin/picture/main/image-1.jpg',

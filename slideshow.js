@@ -7,6 +7,8 @@
  */
  
 function SlideShow(){
+	initiate(arguments);
+	
 	/* Functions Vars */
 	
 	var addSlide;
@@ -20,7 +22,7 @@ function SlideShow(){
 	var pre_load = false; // Pre-load images
 	var random = false; // Progress through slides randomly
 	var defaultInterval = 10000; // Default in MS (10 seconds);
-	var hoverPuase = true; // Pause when hovered over image
+	var hoverPause = true; // Pause when hovered over image
 	var transition = "fade"; // TODO create different transitions
 	var hoverPreview = true; // Image preview on selector dots
 	var hoverText = "Click for more!"; // Text displayed when hovered over slide
@@ -49,53 +51,52 @@ function SlideShow(){
 	
 	/* Private Functions */
 	function initiate(arguments){
-		if(initiated){
-			return 0;
+		if(!initiated){
+			// Collects init data from anonymous object
+			if(typeof arguments[0].element != "undefined"){
+				slideShowEl = document.getElementById(arguments[0].element);
+			} else {
+				slideShowEl = document.getElementById("slideshow");
+			}
+			if(typeof arguments[0].pre_load != "undefined"){
+				pre_load = arguments[0].pre_load;
+			}
+			if(typeof arguments[0].random != "undefined"){
+				random = arguments[0].random;
+			}
+			if(typeof arguments[0].interval != "undefined"){
+				defaultInterval = arguments[0].interval;
+			}
+			if(typeof arguments[0].hover_pause != "undefined"){
+				hoverPause = arguments[0].hover_pause;
+			}
+			if(typeof arguments[0].transition != "undefined"){
+				transition = arguments[0].transition;
+			}
+			if(typeof arguments[0].hover_preview != "undefined"){
+				hoverPreview = arguments[0].hover_preview;
+			}
+			if(typeof arguments[0].hover_text != "undefined"){
+				hoverText = arguments[0].hover_text;
+			}
+			if(typeof arguments[0].height != "undefined"){
+				height = arguments[0].height;
+			}
+			if(typeof arguments[0].width != "undefined"){
+				width = arguments[0].width;
+			}
+			if(typeof arguments[0].startOnLoad != "undefined"){
+				startOnLoad = arguments[0].startOnLoad;
+			}
+			if(typeof arguments[0].debug != "undefined"){
+				debugM = arguments[0].debug;
+			}
+			if(typeof arguments[0].onload != "undefined"){
+				slideOnload = arguments[0].onload;
+			}
+			debug("init");
+			initiated = true;
 		}
-		// Collects init data from anonymous object
-		if(typeof arguments[0].element != "undefined"){
-			slideShowEl = document.getElementById(arguments[0].element);
-		} else {
-			slideShowEl = document.getElementById("slideshow");
-		}
-		if(typeof arguments[0].pre_load != "undefined"){
-			pre_load = arguments[0].pre_load;
-		}
-		if(typeof arguments[0].random != "undefined"){
-			random = arguments[0].random;
-		}
-		if(typeof arguments[0].interval != "undefined"){
-			defaultInterval = arguments[0].interval;
-		}
-		if(typeof arguments[0].hover_pause != "undefined"){
-			hoverPause = arguments[0].hover_pause;
-		}
-		if(typeof arguments[0].transition != "undefined"){
-			transition = arguments[0].transition;
-		}
-		if(typeof arguments[0].hover_preview != "undefined"){
-			hoverPreview = arguments[0].hover_preview;
-		}
-		if(typeof arguments[0].hover_text != "undefined"){
-			hoverText = arguments[0].hover_text;
-		}
-		if(typeof arguments[0].height != "undefined"){
-			height = arguments[0].height;
-		}
-		if(typeof arguments[0].width != "undefined"){
-			width = arguments[0].width;
-		}
-		if(typeof arguments[0].startOnLoad != "undefined"){
-			startOnLoad = arguments[0].startOnLoad;
-		}
-		if(typeof arguments[0].debug != "undefined"){
-			debugM = arguments[0].debug;
-		}
-		if(typeof arguments[0].onload != "undefined"){
-			slideOnload = arguments[0].onload;
-		}
-		debug("init");
-		initiated = false;
 	}
 	
 	function create(){
@@ -111,12 +112,16 @@ function SlideShow(){
 			linkEl.id = "slide-link";
 			linkEl.title = hoverText;
 		
-		linkEl.addEventListener("mousemove", function(e){
-			curTimer.stop();
-		});
-		linkEl.addEventListener("mouseout", function(e){
-			curTimer.start();
-		});
+		// Listeners for hover pause
+		if(hoverPause){
+			linkEl.addEventListener("mousemove", function(e){
+				curTimer.stop();
+			});
+			
+			linkEl.addEventListener("mouseout", function(e){
+				curTimer.start();
+			});
+		}
 		
 		imageEl = document.createElement("img");
 			imageEl.id = "slide-image";
@@ -196,17 +201,20 @@ function SlideShow(){
 		color = "#" + color;
 		icolor = "#" + icolor;
 		
-		style.webkitTransitionDuration =
-		style.MozTransitionDuration =
-		style.msTransitionDuration =
-		style.OTransitionDuration =
-		style.transitionDuration = '500ms';
+		els = Array(slideBarEl, titleEl, descEl);
+		for(var i = 0;els.length > i; i++){
+			var style = els[i].style;
+			style.webkitTransitionDuration =
+			style.MozTransitionDuration =
+			style.msTransitionDuration =
+			style.OTransitionDuration =
+			style.transitionDuration = '500ms';
 
-		style.webkitTranstion =
-		style.msTranstion =
-		style.MozTranstion =
-		style.OTranstion = 'color 0.5s, background 0.5s';
-		
+			style.webkitTranstion =
+			style.msTranstion =
+			style.MozTranstion =
+			style.OTranstion = 'color 0.5s, background 0.5s';
+		}
 		slideBarEl.style.background = rgb(color, 0.6);
 		completeEl.style.background = icolor;
 		titleEl.style.color = icolor;
@@ -272,7 +280,6 @@ function SlideShow(){
 		var speed = 500; // default animation speed
 		switch(mode){
 			case "fade":
-				//imageEl.className += " transitionFade";
 				style = imageEl.style;
 				style.opacity = 0;
 				style.webkitTransitionDuration =
@@ -284,7 +291,7 @@ function SlideShow(){
 				style.webkitTranstion =
 				style.msTranstion =
 				style.MozTranstion =
-				style.OTranstion = 'opacity 0.5s';
+				style.OTranstion = 'opacity' + (speed/1000)  +'s';
 				animateFinish = function(){
 					imageEl.style.opacity = 100;
 				}
@@ -336,8 +343,10 @@ function SlideShow(){
 			return 0;
 		}
 		for(var i = 0;arguments.length > i;i++){
+			// slide bar inversion processing
 			var invert = "#000000";
 			if(typeof arguments[i].invert != "undefined") invert = arguments[i].invert;
+			
 			slides.push(new Slide(i, arguments[i].img, arguments[i].title, arguments[i].link, arguments[i].desc, invert));
 		}
 		total = slides.length;
@@ -426,7 +435,5 @@ function SlideShow(){
 		
 		// Starts
 		startTimer();
-	}
-	
-	initiate(arguments);
+	}	
 }
