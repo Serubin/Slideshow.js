@@ -1,6 +1,6 @@
 var slideshow;
-function start(){
-	slideshow = new SlideShow({startOnLoad: false,pre_load: true,width: 960,height: 550,debug: true});
+(function(){
+	slideshow = new SlideShow({pre_load: true,width: 960,height: 550,debug: true});
 
 	slideshow.addSlide({
 	img:	'http://localhost/Serubin/picture/main/image-1.jpg',
@@ -35,6 +35,4 @@ function start(){
 	link:	'/serunified/test/serubin.net/pictures/dc_people',
 	desc:	'These photos were taken during a trip to DC. <br/>I focused on shooting on people, all candid shots...'
 	});
-}
-
-onLoad.add("start()");
+});

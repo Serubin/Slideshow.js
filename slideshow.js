@@ -6,9 +6,10 @@
  * Do not distribute.
  */
  
-function SlideShow(){
+function SlideShow(initObject){
 	/* Functions Vars */
 	
+	var init;
 	var addSlide;
 	var start;
 	var next;
@@ -49,50 +50,51 @@ function SlideShow(){
 	
 	/* Private Functions */
 	function initiate(arguments){
+		console.log(arguments);
 		if(initiated){
 			return 0;
 		}
 		// Collects init data from anonymous object
-		if(typeof arguments[0].element != "undefined"){
-			slideShowEl = document.getElementById(arguments[0].element);
+		if(typeof arguments.element != "undefined"){
+			slideShowEl = document.getElementById(arguments.element);
 		} else {
 			slideShowEl = document.getElementById("slideshow");
 		}
-		if(typeof arguments[0].pre_load != "undefined"){
-			pre_load = arguments[0].pre_load;
+		if(typeof arguments.pre_load != "undefined"){
+			pre_load = arguments.pre_load;
 		}
-		if(typeof arguments[0].random != "undefined"){
-			random = arguments[0].random;
+		if(typeof arguments.random != "undefined"){
+			random = arguments.random;
 		}
-		if(typeof arguments[0].interval != "undefined"){
-			defaultInterval = arguments[0].interval;
+		if(typeof arguments.interval != "undefined"){
+			defaultInterval = arguments.interval;
 		}
-		if(typeof arguments[0].hover_pause != "undefined"){
-			hoverPause = arguments[0].hover_pause;
+		if(typeof arguments.hover_pause != "undefined"){
+			hoverPause = arguments.hover_pause;
 		}
-		if(typeof arguments[0].transition != "undefined"){
-			transition = arguments[0].transition;
+		if(typeof arguments.transition != "undefined"){
+			transition = arguments.transition;
 		}
-		if(typeof arguments[0].hover_preview != "undefined"){
-			hoverPreview = arguments[0].hover_preview;
+		if(typeof arguments.hover_preview != "undefined"){
+			hoverPreview = arguments.hover_preview;
 		}
-		if(typeof arguments[0].hover_text != "undefined"){
-			hoverText = arguments[0].hover_text;
+		if(typeof arguments.hover_text != "undefined"){
+			hoverText = arguments.hover_text;
 		}
-		if(typeof arguments[0].height != "undefined"){
-			height = arguments[0].height;
+		if(typeof arguments.height != "undefined"){
+			height = arguments.height;
 		}
-		if(typeof arguments[0].width != "undefined"){
-			width = arguments[0].width;
+		if(typeof arguments.width != "undefined"){
+			width = arguments.width;
 		}
-		if(typeof arguments[0].startOnLoad != "undefined"){
-			startOnLoad = arguments[0].startOnLoad;
+		if(typeof arguments.startOnLoad != "undefined"){
+			startOnLoad = arguments.startOnLoad;
 		}
-		if(typeof arguments[0].debug != "undefined"){
-			debugM = arguments[0].debug;
+		if(typeof arguments.debug != "undefined"){
+			debugM = arguments.debug;
 		}
-		if(typeof arguments[0].onload != "undefined"){
-			slideOnload = arguments[0].onload;
+		if(typeof arguments.onload != "undefined"){
+			slideOnload = arguments.onload;
 		}
 		debug("init");
 		initiated = false;
@@ -112,10 +114,12 @@ function SlideShow(){
 			linkEl.title = hoverText;
 		
 		linkEl.addEventListener("mousemove", function(e){
-			curTimer.stop();
+			if(typeof curTimer != "undefined")
+				curTimer.stop();
 		});
 		linkEl.addEventListener("mouseout", function(e){
-			curTimer.start();
+			if(typeof curTimer != "undefined")
+				curTimer.start();
 		});
 		
 		imageEl = document.createElement("img");
@@ -342,7 +346,6 @@ function SlideShow(){
 		}
 		total = slides.length;
 		preLoadImages();
-		create();
 	}
 	
 	this.start = function(){
@@ -363,6 +366,12 @@ function SlideShow(){
 	this.resume = function(){
 		debug("resume");
 		curTimer.start();
+	}
+	
+	this.init = function(){
+		console.log(initObject);
+		initiate(initObject);
+		create();
 	}
 	
 	/* Internal Objects */
@@ -428,5 +437,4 @@ function SlideShow(){
 		startTimer();
 	}
 	
-	initiate(arguments);
 }
