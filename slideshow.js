@@ -28,7 +28,8 @@ function SlideShow(initObject){
 	var random = false; // Progress through slides randomly
 	var defaultInterval = 10000; // Default in MS (10 seconds);
 	var hoverPause = true; // Pause when hovered over image
-	var transition = "fade"; // TODO create different transitions
+	var transition = "fade"; // default transition
+	var easing = TWEEN.Easing.Quadratic.InOut; // Default easings
 	var selectorNav = false; // Selector navigation option
 	var arrowNav = false; // Arrow navigation option
 	var hoverPreview = true; // Image preview on selector dots
@@ -37,6 +38,7 @@ function SlideShow(initObject){
 	var autoH = false;
 	var width = 925; // Default frame size
 	var autoW = false;
+	var matchWindow = false;
 	var mobileOverride = false; // Keep from adding viewport to mobile device
 	var debugM = false; // debug messages are false by default
 	var slideOnload = undefined;
@@ -52,6 +54,7 @@ function SlideShow(initObject){
 	var curTimer;
 	var slideHistory = new Array();
 	var descOffset;
+	var css3 = false; // CSS3 Support
 	
 	/* Element Vars */
 	var slideShowEl; // SlideShow Element Object
@@ -73,6 +76,7 @@ function SlideShow(initObject){
 		} else {
 			slideShowEl = document.getElementById("slideshow");
 		}
+		
 		debug("Loading SlideShow element: " + slideShowEl.id);
 		if(typeof options.pre_load != "undefined"){
 			pre_load = options.pre_load;
@@ -126,6 +130,9 @@ function SlideShow(initObject){
 				width = options.width;
 			}
 		}
+		if(typeof options.match_window != "undefined"){
+			matchWindow = options.match_window;
+		}
 		if(typeof options.startOnLoad != "undefined"){
 			startOnLoad = options.startOnLoad;
 		}
@@ -134,6 +141,9 @@ function SlideShow(initObject){
 		}
 		if(typeof options.onload != "undefined"){
 			slideOnload = options.onload;
+		}
+		if(typeof options.easing != "undefined"){
+			easing = options.easing;
 		}
 		
 		
@@ -148,6 +158,14 @@ function SlideShow(initObject){
 					mobileMeta.content = "width=device-width, user-scalable=no";
 				document.getElementsByTagName("head")[0].appendChild(mobileMeta);
 			}
+		}
+		
+		// Check css3
+		if ('WebkitTransform' in document.body.style 
+		|| 'MozTransform' in document.body.style 
+		|| 'OTransform' in document.body.style 
+		|| 'transform' in document.body.style){
+			var css3 = true;
 		}
 		
 		// Created early for slide loading
@@ -210,11 +228,11 @@ function SlideShow(initObject){
 			linkEl.title = hoverText;
 		// Hoverpause listeners if enabled
 		if(hoverPause){
-			linkEl.addEventListener("mousemove", function(e){
+			addEvent(linkEl, "mousemove", function(e){
 				if(typeof curTimer != "undefined")
 					curTimer.stop();
 			});
-			linkEl.addEventListener("mouseout", function(e){
+			addEvent(linkEl, "mouseout", function(e){
 				if(typeof curTimer != "undefined")
 					curTimer.start();
 			});
@@ -246,7 +264,7 @@ function SlideShow(initObject){
 				arrowLeft.id = "arrow-left";
 				arrowLeft.href = "javascript:void(0);";
 				arrowLeft.innerHTML = "Previous";
-				arrowLeft.addEventListener("click", function(e){
+				addEvent(arrowLeft, "click", function(e){
 					switchPreviousSlide();
 					e.preventDefault();
 				});
@@ -255,7 +273,7 @@ function SlideShow(initObject){
 				arrowRight.id = "arrow-right";
 				arrowRight.href = "javascript:void(0);";
 				arrowRight.innerHTML = "Next";
-				arrowRight.addEventListener("click", function(e){
+				addEvent(arrowRight, "click", function(e){
 					switchNextSlide();
 					e.preventDefault();
 				});
@@ -278,7 +296,7 @@ function SlideShow(initObject){
 					a.id = "slide-photo-" + i;
 					a.dataId = i;
 					a.title = slides[i].title;
-					a.addEventListener("click", function(e){
+					addEvent(a, "click", function(e){
 						debug("Selector switch: " + this.dataId);
 						switchSlide(slides[this.dataId]);
 						e.preventDefault();
@@ -291,18 +309,24 @@ function SlideShow(initObject){
 					var span = document.createElement("span");
 						span.className = "select-hover";
 						span.style.display = "none";
+						
+					var div = document.createElement("div");
+						div.className = "select-hover-wrap";
+						
 					var img = document.createElement("img");
 						img.src = slides[i].img;
-						img.width = "200";
-						img.height = "100";
-					span.appendChild(img);
+						
+					
+					centerImage(img, 150, 84);
+					div.appendChild(img);
+					span.appendChild(div);
 					li.appendChild(span);
 					
 					// Event listeners for mouse in and out
-					a.addEventListener("mouseover", function(){
+					addEvent(a, "mouseover", function(){
 						this.nextSibling.style.display = "";
 					});
-					a.addEventListener("mouseout", function(){
+					addEvent(a, "mouseout", function(){
 						this.nextSibling.style.display = "none";
 					});
 				}
@@ -312,12 +336,37 @@ function SlideShow(initObject){
 		}
 		
 		// Resize event listener to resize image and recenter on change
-		window.addEventListener('resize', function(e){
+		addEvent(window, 'resize', function(e){
 			resize();
+		});
+		
+		// Handles Arrow keys
+		addEvent(window, 'keydown', function(e){
+			// Left key
+			if(e.keyCode == 37){ 
+				switchPreviousSlide();
+				e.preventDefault();
+				return false;
+			}
+			// Right key
+			if(e.keyCode == 39){
+				switchNextSlide();
+				e.preventDefault();
+				return false;
+			}
+			
 		});
 		
 		if(startOnLoad){
 			startShow();
+		}
+	}
+	
+	function addEvent(object,listener, callback){
+		if(object.addEventListener){
+			object.addEventListener(listener, callback);
+		} else {
+			object.attachEvent("on" + listener, callback);
 		}
 	}
 	// Inverts color of bar
@@ -349,6 +398,13 @@ function SlideShow(initObject){
 		completeEl.style.background = icolor;
 		titleEl.style.color = icolor;
 		descEl.style.color = icolor;
+		
+		if(typeof navArrowEls != "undefined"){
+			for(var i = 0;navArrowEls.length > i;i++){
+				navArrowEls[i].style.background = rgb(color, 0.6);
+			}
+		}
+		
 		
 		function rgb(hex, alpha){
 			var r = parseInt(hex.substring(1, 3), 16);
@@ -412,6 +468,27 @@ function SlideShow(initObject){
 		debug("Previous Image: " + curSlide);
 		previousSlide = curSlide; // Sets previous slide id
 		curSlide = slide.id; // Sets new slide id
+		
+		// Handles slide animation with direction
+		if(transition.indexOf("slide") != -1){
+			var distance = curSlide - previousSlide;
+			debug("slide");
+			// going from max to zero
+			if(Math.abs(distance) == slides.length - 1){
+				if(distance > 0){
+					transition = "slide-left";
+				} else {
+					transition = "slide-right";
+				}
+			} else {			
+				if(distance < 0){
+					transition = "slide-left";
+				} else {
+					transition = "slide-right";
+				}
+			}
+		}
+		
 		if(selectorNav){
 			selectors[previousSlide].element.firstChild.className = "photo-button"; // Resets old slide selector button
 			selectors[curSlide].element.firstChild.className += " photo-button-active"; // Sets new selector button
@@ -430,92 +507,149 @@ function SlideShow(initObject){
 	// Switches text based on ID
 	function switchText(slide){
 		linkEl.href = slide.link;
+		if(typeof slide.title == "undefined")
+			slide.title = "";
+		if(typeof slide.desc == "undefined")
+			slide.desc = "";
+	
 		titleEl.innerHTML = slide.title;
 		descEl.innerHTML = slide.desc;
 	}
 	
 	// Holds different transitions
 	function animate(mode, slide, callback){
-		var speed = 500; // default animation speed;
+		var speed = 1000; // default animation speed;
 		var previous = slides[previousSlide].style;
 		var style = slide.style;
 		style.display = "";
+		console.log(easing);
+		TWEEN.removeAll();
+		if(typeof curTimer != "undefined") curTimer.stop();
+		curTimer = new Timer(switchNextSlide, defaultInterval);
+		if(typeof callback != "undefined") callback();
+		resize();
+			
 		switch(mode){
 			case "fade":
 				style.opacity = 0; // Next image opacity
-				// Animations for next image
-				style.webkitTransitionDuration =
-				style.MozTransitionDuration =
-				style.msTransitionDuration =
-				style.OTransitionDuration =
-				style.transitionDuration = speed + 'ms';
-
-				style.webkitTranstion =
-				style.msTranstion =
-				style.MozTranstion =
-				style.OTranstion = 
-				style.transition = 'opacity ' + (speed/1000)  +'s';
-
-				previous.opacity = 0;
-				
-				animateFinish = function(){
-					style.opacity = 100;
-					// change for all otherslides
-					hideAllSlides(slide.id);
-				}
+				style.zIndex = 0;
+				console.log("TWEEN START");
+				var tween = new TWEEN.Tween({x: 0})
+					.to( {x: 100}, speed) 
+					.easing( easing )
+					.onUpdate(function(){
+						style.opacity = this.x/100;
+					})
+					.onComplete(function(){
+						hideAllSlides(slide.id);
+						style.zIndex = -5;
+						console.log("TWEEN END");
+					})
+					.start();
+			
+				animateTween();
 			break;
-			case "slide":
-				style.marginLeft = ((width + (width - ((height / slide.width) * slide.width))) * -1);
+			case "slide-right":
+				style.zIndex = 0;
 				
-				style.webkitTransitionDuration =
-				style.MozTransitionDuration =
-				style.msTransitionDuration =
-				style.OTransitionDuration =
-				style.transitionDuration = speed + 'ms';
-
-				style.webkitTranstion =
-				style.msTranstion =
-				style.MozTranstion =
-				style.OTranstion = 
-				style.transition = 'margin-left ' + (speed/1000)  +'s';
+				var margin = ((width + (width - ((width / slide.width) * slide.style.zoom))) * -1);
+				style.marginLeft = margin + "px";
 				
-				//previous.marginLeft = width;
-				animateFinish = function(){
-					style.marginLeft = 0;
-					hideAllSlides(slide.id);
-				}
+				console.log("TWEEN START");
+				var tween = new TWEEN.Tween({x: margin})
+					.to( {x: 0}, speed) 
+					.easing( easing )
+					.onUpdate(function(){
+						style.marginLeft = this.x + "px";
+					})
+					.onComplete(function(){
+						hideAllSlides(slide.id);
+						style.zIndex = -5;
+						console.log("TWEEN END");
+					})
+					.start();
+			
+				animateTween();
+				
+			break;
+			case "slide-left":
+				style.zIndex = 0;
+				
+				var margin = ((width + (width - ((width / slide.width) * slide.style.zoom))));
+				style.marginLeft = margin + "px";
+				
+				console.log("TWEEN START");
+				var tween = new TWEEN.Tween({x: margin})
+					.to( {x: 0}, speed) 
+					.easing( TWEEN.Easing.Quadratic.InOut )
+					.onUpdate(function(){
+						style.marginLeft = this.x + "px";
+					})
+					.onComplete(function(){
+						hideAllSlides(slide.id);
+						style.zIndex = -5;
+						console.log("TWEEN END");
+					})
+					.start();
+			
+				animateTween();
+				
 			break;
 			default:
 				error("No transition found");
 			break;
 		}
-		setTimeout(function(){
-			if(typeof animateFinish != "undefined") animateFinish();
-			if(typeof curTimer != "undefined") curTimer.stop();
-			curTimer = new Timer(switchNextSlide, defaultInterval);
-			if(typeof callback != "undefined") callback();
-			resize();
-		}, (speed));
+		
+		function animateTween(){
+			requestAnimFrame(animateTween);
+			TWEEN.update();
+		}
 	}
 	
 	// Centers/zooms image with aspect ratio
 	function centerImage(slide){
+		var slide;
+		var iheight = height;
+		var iwidth = width;
+		
+		if(typeof arguments[0] != "undefined")
+			slide = arguments[0];
+		if(typeof arguments[1] != "undefined")
+			iwidth = arguments[1];
+		if(typeof arguments[2] != "undefined")
+			iheight = arguments[2];
+			
 		var style = slide.style;
-		var widthRatio = slide.width / width;
-		var heightRatio = slide.height / height;
+		var widthRatio = slide.width / iwidth;
+		var heightRatio = slide.height / iheight;
 		var zoom = 0;
 		var top = 0;
 		var left = 0;
 		if(widthRatio > heightRatio) {
-			zoom = (height / slide.height);
+			zoom = (iheight / slide.height);
 			
 		} else {
-			zoom = (width / slide.width);
+			zoom = (iwidth / slide.width);
 		}
-		top = (height - zoom * slide.height)/2;
-		left = (width - zoom * slide.width)/2;
+		top = (iheight - zoom * slide.height)/2;
+		left = (iwidth - zoom * slide.width)/2;
 		
-		style.zoom = zoom;
+		if(!css3){
+			style.zoom = zoom;
+		} else {
+			
+			// css3 zoom
+			style.transform
+			= style.OTransform
+			= style.webkitTransform
+			= style.MozTransform = "scale(" + zoom + ")";
+			
+			style.transformOrigin
+			= style.OTransformOrigin
+			= style.webkitTransformOrigin
+			= style.MozTransformOrigin = "0 0";
+		}
+		
 		style.top = top + "px";
 		style.left = left + "px";
 		debug("Resize {Zoom: " + zoom + ", Left: " + left + ", Top: " + top + "}");
@@ -540,10 +674,20 @@ function SlideShow(initObject){
 	}
 	
 	function getWindowSize(){
-		var w = window,
+		var w, d, e, g;
+		
+		if(!matchWindow){
+			w = slideShowEl.parentNode,
+			d = slideShowEl.parentNode, 
+			e = slideShowEl.parentNode,
+			g = slideShowEl.parentNode;
+		} else {
+			w = window,
 			d = document,
 			e = d.documentElement,
-			g = d.getElementsByTagName('body')[0],
+			g = d.getElementsByTagName('body')[0];
+		}	
+
 		x = w.innerWidth || e.clientWidth || g.clientWidth,
 		y = w.innerHeight|| e.clientHeight|| g.clientHeight;
 		return {"x": x, "y": y};
@@ -645,46 +789,10 @@ function SlideShow(initObject){
 		this.height = height;
 		this.loaded = loaded;
 		this.style = style;
+		this.obj = obj;
+		
 		/* Public Slide Functions */
-		this.removeAnimations = function() {
-			var style = obj.style;
-			// Transition Durations
-			style.webkitTransitionDuration =
-				style.MozTransitionDuration =
-				style.msTransitionDuration =
-				style.OTransitionDuration =
-				style.transitionDuration = '';
-			// Transform Duration
-			style.webkitTransformDuration =
-				style.MozTransformDuration =
-				style.msTransformDuration =
-				style.OTransformDuration =
-				style.transformDuration = '';
-			// Animation Duration
-			style.webkitAnimationDuration =
-				style.MozAnimationDuration =
-				style.msAnimationDuration =
-				style.OAnimationDuration =
-				style.animationDuration = '';
-			// Transitions
-			style.webkitTranstion =
-				style.msTranstion =
-				style.MozTranstion =
-				style.OTranstion = 
-				style.transition = '';
-			// Transforms
-			style.webkitTransform =
-				style.msTransform =
-				style.MozTransform =
-				style.OTransform = 
-				style.transform = '';
-			// Animations
-			style.webkitAnimation =
-				style.msAnimation =
-				style.MozAnimation =
-				style.OAnimation = 
-				style.animation = '';
-		}
+		
 	}
 	
 	function Timer(call, interval){
@@ -738,3 +846,469 @@ function SlideShow(initObject){
 		startTimer();
 	}
 }
+
+/* TWEEN */
+
+/**
+ * @author sole / http://soledadpenades.com
+ * @author mrdoob / http://mrdoob.com
+ * @author Robert Eisele / http://www.xarg.org
+ * @author Philippe / http://philippe.elsass.me
+ * @author Robert Penner / http://www.robertpenner.com/easing_terms_of_use.html
+ * @author Paul Lewis / http://www.aerotwist.com/
+ * @author lechecacharro
+ * @author Josh Faul / http://jocafa.com/
+ * @author egraether / http://egraether.com/
+ * @author endel / http://endel.me
+ * @author Ben Delarre / http://delarre.net
+ */
+
+// Date.now shim for (ahem) Internet Explo(d|r)er
+if ( Date.now === undefined ) {
+	Date.now = function (){
+		return new Date().valueOf();
+	};
+}
+
+var TWEEN = TWEEN || ( function () {
+	var _tweens = [];
+	return {
+		REVISION: '12',
+		getAll: function () {
+			return _tweens;
+		},
+		removeAll: function () {
+			_tweens = [];
+		},
+		add: function ( tween ) {
+			_tweens.push( tween );
+		},
+		remove: function ( tween ) {
+			var i = _tweens.indexOf( tween );
+			if ( i !== -1 ) {
+				_tweens.splice( i, 1 );
+			}
+		},
+		update: function ( time ) {
+			if ( _tweens.length === 0 ) return false;
+			var i = 0;
+			time = time !== undefined ? time : ( typeof window !== 'undefined' && window.performance !== undefined && window.performance.now !== undefined ? window.performance.now() : Date.now() );
+			while ( i < _tweens.length ) {
+				if ( _tweens[ i ].update( time ) ) {
+					i++;
+				} else {
+					_tweens.splice( i, 1 );
+				}
+			}
+			return true;
+		}
+	};
+} )();
+
+TWEEN.Tween = function ( object ) {
+	var _object = object;
+	var _valuesStart = {};
+	var _valuesEnd = {};
+	var _valuesStartRepeat = {};
+	var _duration = 1000;
+	var _repeat = 0;
+	var _yoyo = false;
+	var _isPlaying = false;
+	var _reversed = false;
+	var _delayTime = 0;
+	var _startTime = null;
+	var _easingFunction = TWEEN.Easing.Linear.None;
+	var _interpolationFunction = TWEEN.Interpolation.Linear;
+	var _chainedTweens = [];
+	var _onStartCallback = null;
+	var _onStartCallbackFired = false;
+	var _onUpdateCallback = null;
+	var _onCompleteCallback = null;
+
+	// Set all starting values present on the target object
+	for ( var field in object ) {
+		_valuesStart[ field ] = parseFloat(object[field], 10);
+	}
+	
+	this.to = function ( properties, duration ) {
+		if ( duration !== undefined ) {
+			_duration = duration;
+		}
+		_valuesEnd = properties;
+		return this;
+	};
+	
+	this.start = function ( time ) {
+		TWEEN.add( this );
+		_isPlaying = true;
+		_onStartCallbackFired = false;
+		_startTime = time !== undefined ? time : ( typeof window !== 'undefined' && window.performance !== undefined && window.performance.now !== undefined ? window.performance.now() : Date.now() );
+		_startTime += _delayTime;
+		for ( var property in _valuesEnd ) {
+			// check if an Array was provided as property value
+			if ( _valuesEnd[ property ] instanceof Array ) {
+				if ( _valuesEnd[ property ].length === 0 ) {
+					continue;
+				}
+				// create a local copy of the Array with the start value at the front
+				_valuesEnd[ property ] = [ _object[ property ] ].concat( _valuesEnd[ property ] );
+			}
+			_valuesStart[ property ] = _object[ property ];
+			if( ( _valuesStart[ property ] instanceof Array ) === false ) {
+				_valuesStart[ property ] *= 1.0; // Ensures we're using numbers, not strings
+			}
+			_valuesStartRepeat[ property ] = _valuesStart[ property ] || 0;
+		}
+		return this;
+	};
+
+	this.stop = function () {
+		if ( !_isPlaying ) {
+			return this;
+		}
+		TWEEN.remove( this );
+		_isPlaying = false;
+		this.stopChainedTweens();
+		return this;
+	};
+
+	this.stopChainedTweens = function () {
+		for ( var i = 0, numChainedTweens = _chainedTweens.length; i < numChainedTweens; i++ ) {
+			_chainedTweens[ i ].stop();
+		}
+	};
+
+	this.delay = function ( amount ) {
+		_delayTime = amount;
+		return this;
+	};
+
+	this.repeat = function ( times ) {
+		_repeat = times;
+		return this;
+	};
+
+	this.yoyo = function( yoyo ) {
+		_yoyo = yoyo;
+		return this;
+	};
+
+	this.easing = function ( easing ) {
+		_easingFunction = easing;
+		return this;
+	};
+	
+	this.interpolation = function ( interpolation ) {
+		_interpolationFunction = interpolation;
+		return this;
+	};
+
+	this.chain = function () {
+		_chainedTweens = arguments;
+		return this;
+	};
+
+	this.onStart = function ( callback ) {
+		_onStartCallback = callback;
+		return this;
+	};
+
+	this.onUpdate = function ( callback ) {
+		_onUpdateCallback = callback;
+		return this;
+	};
+
+	this.onComplete = function ( callback ) {
+		_onCompleteCallback = callback;
+		return this;
+	};
+
+	this.update = function ( time ) {
+		var property;
+		if ( time < _startTime ) {
+			return true;
+		}
+		if ( _onStartCallbackFired === false ) {
+			if ( _onStartCallback !== null ) {
+				_onStartCallback.call( _object );
+			}
+			_onStartCallbackFired = true;
+		}
+		var elapsed = ( time - _startTime ) / _duration;
+		elapsed = elapsed > 1 ? 1 : elapsed;
+		var value = _easingFunction( elapsed );
+		for ( property in _valuesEnd ) {
+			var start = _valuesStart[ property ] || 0;
+			var end = _valuesEnd[ property ];
+			if ( end instanceof Array ) {
+				_object[ property ] = _interpolationFunction( end, value );
+			} else {
+                // Parses relative end values with start as base (e.g.: +10, -3)
+				if ( typeof(end) === "string" ) {
+					end = start + parseFloat(end, 10);
+				}
+				// protect against non numeric properties.
+                if ( typeof(end) === "number" ) {
+					_object[ property ] = start + ( end - start ) * value;
+				}
+			}
+		}
+		if ( _onUpdateCallback !== null ) {
+			_onUpdateCallback.call( _object, value );
+		}
+		if ( elapsed == 1 ) {
+			if ( _repeat > 0 ) {
+				if( isFinite( _repeat ) ) {
+					_repeat--;
+				}
+				// reassign starting values, restart by making startTime = now
+				for( property in _valuesStartRepeat ) {
+					if ( typeof( _valuesEnd[ property ] ) === "string" ) {
+						_valuesStartRepeat[ property ] = _valuesStartRepeat[ property ] + parseFloat(_valuesEnd[ property ], 10);
+					}
+					if (_yoyo) {
+						var tmp = _valuesStartRepeat[ property ];
+						_valuesStartRepeat[ property ] = _valuesEnd[ property ];
+						_valuesEnd[ property ] = tmp;
+						_reversed = !_reversed;
+					}
+					_valuesStart[ property ] = _valuesStartRepeat[ property ];
+				}
+				_startTime = time + _delayTime;
+				return true;
+			} else {
+				if ( _onCompleteCallback !== null ) {
+					_onCompleteCallback.call( _object );
+				}
+				for ( var i = 0, numChainedTweens = _chainedTweens.length; i < numChainedTweens; i++ ) {
+					_chainedTweens[ i ].start( time );
+				}
+				return false;
+			}
+		}
+		return true;
+	};
+};
+
+TWEEN.Easing = {
+	Linear: {
+		None: function ( k ) {
+			return k;
+		}
+	},
+	
+	Quadratic: {
+		In: function ( k ) {
+			return k * k;
+		},
+		Out: function ( k ) {
+			return k * ( 2 - k );
+		},
+		InOut: function ( k ) {
+			if ( ( k *= 2 ) < 1 ) return 0.5 * k * k;
+			return - 0.5 * ( --k * ( k - 2 ) - 1 );
+		}
+	},
+	
+	Cubic: {
+		In: function ( k ) {
+			return k * k * k;
+		},
+		Out: function ( k ) {
+			return --k * k * k + 1;
+		},
+		InOut: function ( k ) {
+			if ( ( k *= 2 ) < 1 ) return 0.5 * k * k * k;
+			return 0.5 * ( ( k -= 2 ) * k * k + 2 );
+		}
+	},
+	
+	Quartic: {
+		In: function ( k ) {
+			return k * k * k * k;
+		},
+		Out: function ( k ) {
+			return 1 - ( --k * k * k * k );
+		},
+		InOut: function ( k ) {
+			if ( ( k *= 2 ) < 1) return 0.5 * k * k * k * k;
+			return - 0.5 * ( ( k -= 2 ) * k * k * k - 2 );
+		}
+	},
+	
+	Quintic: {
+		In: function ( k ) {
+			return k * k * k * k * k;
+		},
+		Out: function ( k ) {
+			return --k * k * k * k * k + 1;
+		},
+		InOut: function ( k ) {
+			if ( ( k *= 2 ) < 1 ) return 0.5 * k * k * k * k * k;
+			return 0.5 * ( ( k -= 2 ) * k * k * k * k + 2 );
+		}
+	},
+
+	Sinusoidal: {
+		In: function ( k ) {
+			return 1 - Math.cos( k * Math.PI / 2 );
+		},
+		Out: function ( k ) {
+			return Math.sin( k * Math.PI / 2 );
+		},
+		InOut: function ( k ) {
+			return 0.5 * ( 1 - Math.cos( Math.PI * k ) );
+		}
+	},
+
+	Exponential: {
+		In: function ( k ) {
+			return k === 0 ? 0 : Math.pow( 1024, k - 1 );
+		},
+		Out: function ( k ) {
+			return k === 1 ? 1 : 1 - Math.pow( 2, - 10 * k );
+		},
+		InOut: function ( k ) {
+			if ( k === 0 ) return 0;
+			if ( k === 1 ) return 1;
+			if ( ( k *= 2 ) < 1 ) return 0.5 * Math.pow( 1024, k - 1 );
+			return 0.5 * ( - Math.pow( 2, - 10 * ( k - 1 ) ) + 2 );
+		}
+	},
+
+	Circular: {
+		In: function ( k ) {
+			return 1 - Math.sqrt( 1 - k * k );
+		},
+		Out: function ( k ) {
+			return Math.sqrt( 1 - ( --k * k ) );
+		},
+		InOut: function ( k ) {
+			if ( ( k *= 2 ) < 1) return - 0.5 * ( Math.sqrt( 1 - k * k) - 1);
+			return 0.5 * ( Math.sqrt( 1 - ( k -= 2) * k) + 1);
+		}
+	},
+
+	Elastic: {
+		In: function ( k ) {
+			var s, a = 0.1, p = 0.4;
+			if ( k === 0 ) return 0;
+			if ( k === 1 ) return 1;
+			if ( !a || a < 1 ) { a = 1; s = p / 4; }
+			else s = p * Math.asin( 1 / a ) / ( 2 * Math.PI );
+			return - ( a * Math.pow( 2, 10 * ( k -= 1 ) ) * Math.sin( ( k - s ) * ( 2 * Math.PI ) / p ) );
+		},
+		Out: function ( k ) {
+			var s, a = 0.1, p = 0.4;
+			if ( k === 0 ) return 0;
+			if ( k === 1 ) return 1;
+			if ( !a || a < 1 ) { a = 1; s = p / 4; }
+			else s = p * Math.asin( 1 / a ) / ( 2 * Math.PI );
+			return ( a * Math.pow( 2, - 10 * k) * Math.sin( ( k - s ) * ( 2 * Math.PI ) / p ) + 1 );
+		},
+		InOut: function ( k ) {
+			var s, a = 0.1, p = 0.4;
+			if ( k === 0 ) return 0;
+			if ( k === 1 ) return 1;
+			if ( !a || a < 1 ) { a = 1; s = p / 4; }
+			else s = p * Math.asin( 1 / a ) / ( 2 * Math.PI );
+			if ( ( k *= 2 ) < 1 ) return - 0.5 * ( a * Math.pow( 2, 10 * ( k -= 1 ) ) * Math.sin( ( k - s ) * ( 2 * Math.PI ) / p ) );
+			return a * Math.pow( 2, -10 * ( k -= 1 ) ) * Math.sin( ( k - s ) * ( 2 * Math.PI ) / p ) * 0.5 + 1;
+		}
+	},
+
+	Back: {
+		In: function ( k ) {
+			var s = 1.70158;
+			return k * k * ( ( s + 1 ) * k - s );
+		},
+		Out: function ( k ) {
+			var s = 1.70158;
+			return --k * k * ( ( s + 1 ) * k + s ) + 1;
+		},
+		InOut: function ( k ) {
+			var s = 1.70158 * 1.525;
+			if ( ( k *= 2 ) < 1 ) return 0.5 * ( k * k * ( ( s + 1 ) * k - s ) );
+			return 0.5 * ( ( k -= 2 ) * k * ( ( s + 1 ) * k + s ) + 2 );
+		}
+	},
+
+	Bounce: {
+		In: function ( k ) {
+			return 1 - TWEEN.Easing.Bounce.Out( 1 - k );
+		},
+		Out: function ( k ) {
+			if ( k < ( 1 / 2.75 ) ) {
+				return 7.5625 * k * k;
+			} else if ( k < ( 2 / 2.75 ) ) {
+				return 7.5625 * ( k -= ( 1.5 / 2.75 ) ) * k + 0.75;
+			} else if ( k < ( 2.5 / 2.75 ) ) {
+				return 7.5625 * ( k -= ( 2.25 / 2.75 ) ) * k + 0.9375;
+			} else {
+				return 7.5625 * ( k -= ( 2.625 / 2.75 ) ) * k + 0.984375;
+			}
+		},
+		InOut: function ( k ) {
+			if ( k < 0.5 ) return TWEEN.Easing.Bounce.In( k * 2 ) * 0.5;
+			return TWEEN.Easing.Bounce.Out( k * 2 - 1 ) * 0.5 + 0.5;
+		}
+	}
+};
+
+TWEEN.Interpolation = {
+	Linear: function ( v, k ) {
+		var m = v.length - 1, f = m * k, i = Math.floor( f ), fn = TWEEN.Interpolation.Utils.Linear;
+		if ( k < 0 ) return fn( v[ 0 ], v[ 1 ], f );
+		if ( k > 1 ) return fn( v[ m ], v[ m - 1 ], m - f );
+		return fn( v[ i ], v[ i + 1 > m ? m : i + 1 ], f - i );
+	},
+	Bezier: function ( v, k ) {
+		var b = 0, n = v.length - 1, pw = Math.pow, bn = TWEEN.Interpolation.Utils.Bernstein, i;
+		for ( i = 0; i <= n; i++ ) {
+			b += pw( 1 - k, n - i ) * pw( k, i ) * v[ i ] * bn( n, i );
+		}
+		return b;
+	},
+	CatmullRom: function ( v, k ) {
+		var m = v.length - 1, f = m * k, i = Math.floor( f ), fn = TWEEN.Interpolation.Utils.CatmullRom;
+		if ( v[ 0 ] === v[ m ] ) {
+			if ( k < 0 ) i = Math.floor( f = m * ( 1 + k ) );
+			return fn( v[ ( i - 1 + m ) % m ], v[ i ], v[ ( i + 1 ) % m ], v[ ( i + 2 ) % m ], f - i );
+		} else {
+			if ( k < 0 ) return v[ 0 ] - ( fn( v[ 0 ], v[ 0 ], v[ 1 ], v[ 1 ], -f ) - v[ 0 ] );
+			if ( k > 1 ) return v[ m ] - ( fn( v[ m ], v[ m ], v[ m - 1 ], v[ m - 1 ], f - m ) - v[ m ] );
+			return fn( v[ i ? i - 1 : 0 ], v[ i ], v[ m < i + 1 ? m : i + 1 ], v[ m < i + 2 ? m : i + 2 ], f - i );
+		}
+	},
+	Utils: {
+		Linear: function ( p0, p1, t ) {
+			return ( p1 - p0 ) * t + p0;
+		},
+		Bernstein: function ( n , i ) {
+			var fc = TWEEN.Interpolation.Utils.Factorial;
+			return fc( n ) / fc( i ) / fc( n - i );
+		},
+		Factorial: ( function () {
+			var a = [ 1 ];
+			return function ( n ) {
+				var s = 1, i;
+				if ( a[ n ] ) return a[ n ];
+				for ( i = n; i > 1; i-- ) s *= i;
+				return a[ n ] = s;
+			};
+		} )(),
+		CatmullRom: function ( p0, p1, p2, p3, t ) {
+			var v0 = ( p2 - p0 ) * 0.5, v1 = ( p3 - p1 ) * 0.5, t2 = t * t, t3 = t * t2;
+			return ( 2 * p1 - 2 * p2 + v0 + v1 ) * t3 + ( - 3 * p1 + 3 * p2 - 2 * v0 - v1 ) * t2 + v0 * t + p1;
+		}
+	}
+};
+
+window.requestAnimFrame = (function(){
+	return  window.requestAnimationFrame	||
+	window.webkitRequestAnimationFrame 		||
+	window.mozRequestAnimationFrame    		||
+	function( callback ){
+		window.setTimeout(callback, 1000 / 60);
+	};
+})();

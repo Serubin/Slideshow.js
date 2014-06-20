@@ -1,6 +1,6 @@
 var slideshow;
 function merp(){
-	slideshow = new SlideShow({pre_load: true,width: "auto",height: "auto",selector_nav: true, arrow_nav: true, debug: true});
+	slideshow = new SlideShow({pre_load: true,width: "auto",height: "auto", match_window: true,transition: "slide", selector_nav: true, arrow_nav: true, easing: TWEEN.Easing.Bounce.EaseInOut, debug: true});
 	slideshow.addSlide(
 		{
 			img:	'http://localhost/Serubin/picture/main/image-8.jpg',
@@ -30,15 +30,12 @@ function merp(){
 			desc:	'These photos were taken during a trip to DC. <br/>I focused on shooting on people, all candid shots...'
 		},{
 			img:	'../photos/cali.JPG',
-			title:	'California',
 			link:	'/serunified/test/serubin.net/pictures/dc_people',
-			desc:	'These photos were taken during a trip to California. <br/>Cool signs and stuff...',
 			invert: '#ffffff'
 		},{
 			img:	'../photos/valve.JPG',
 			title:	'Valves',
 			link:	'/serunified/test/serubin.net/pictures/dc_people',
-			desc:	'These photos were taken of a valve. <br/>Not Valve though :( ...'
 		}
 	);
 	
