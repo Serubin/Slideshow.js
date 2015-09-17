@@ -1,0 +1,28 @@
+<html>
+	<head>
+		<script src="../src/slideshow.js" type="text/Javascript"></script>
+		<script>
+			window.onload = function() {
+				console.log("Page loaded");
+				var slideshow = new SlideShow({element: "slideshow", height: "auto", width: "auto"});
+				slideshow.addSlide({
+						img:	'photos/bost.JPG',
+						title:	'Boston',
+						link:	'#',
+						desc:	'This photos were taken in Boston. <br /> <strong>Look, html support</strong>',
+						invert: '#ffffff'
+					},{
+						img: 	'photos/valve.JPG',
+						title: 	'Fire Valves',
+						link:	'#',
+						desc:	'These are valves on a fire pipe outside a building in boston.'
+					});
+				slideshow.init();
+			}
+		</script>
+	</head>
+
+	<body>
+		<div id="slideshow"></div>
+	</body>
+</html>
