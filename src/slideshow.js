@@ -3,7 +3,6 @@
  * Author: Solomon Rubin, Serubin.net
  * Version: 2.0
  * 
- * Do not distribute.
  */
  
  
